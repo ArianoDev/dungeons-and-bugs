@@ -91,8 +91,6 @@ export function EndScreen({
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
-
-
         <div className="space-y-5">
           {leaderboard.length > 0 ? (
             <div className="rounded-[2rem] border border-white/10 bg-black/25 p-6">
