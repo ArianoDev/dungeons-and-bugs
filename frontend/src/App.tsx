@@ -47,9 +47,11 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!runState.startedAt || runState.screen === 'end') return
+
     const timer = window.setInterval(() => setElapsedNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [runState.screen, runState.startedAt])
 
   const selectedClass = useMemo(
     () => gameClasses.find((gameClass) => gameClass.id === runState.selectedClassId) ?? null,
@@ -107,7 +109,9 @@ function App() {
   }
 
   const startRun = () => {
-    setRunState((current) => ({ ...current, screen: 'dungeon', startedAt: Date.now() }))
+    const now = Date.now()
+    setElapsedNow(now)
+    setRunState((current) => ({ ...current, screen: 'dungeon', startedAt: now }))
   }
 
   const useHint = () => {
@@ -167,6 +171,7 @@ function App() {
     const answeredAll = runState.answers.length >= selectedClass.dungeons.length
 
     if (hasNoHp || answeredAll) {
+      setElapsedNow(Date.now())
       setRunState((current) => ({ ...current, screen: 'end', pendingHintId: null }))
       return
     }
