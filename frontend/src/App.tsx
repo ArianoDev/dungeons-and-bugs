@@ -14,6 +14,7 @@ import {
   classOrder,
   formatTime,
   initialRunState,
+  shuffleDungeonOptions,
   sortLeaderboard,
   type RunState,
 } from './lib/game'
@@ -27,6 +28,7 @@ function App() {
   const [bootstrapStatus, setBootstrapStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [leaderboardNickname, setLeaderboardNickname] = useState('')
   const [leaderboardStatus, setLeaderboardStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [highlightedLeaderboardEntryId, setHighlightedLeaderboardEntryId] = useState<string | null>(null)
   const [copiedShare, setCopiedShare] = useState(false)
   const [elapsedNow, setElapsedNow] = useState(() => Date.now())
 
@@ -57,7 +59,13 @@ function App() {
     [gameClasses, runState.selectedClassId],
   )
 
-  const currentDungeon = selectedClass?.dungeons[runState.currentDungeonIndex] ?? null
+  const currentDungeon = useMemo(() => {
+    const dungeon = selectedClass?.dungeons[runState.currentDungeonIndex]
+    if (!dungeon) return null
+
+    return shuffleDungeonOptions(dungeon, runState.startedAt ?? 0)
+  }, [runState.currentDungeonIndex, runState.startedAt, selectedClass])
+
   const totalDuration = runState.startedAt ? elapsedNow - runState.startedAt : 0
 
   const report = useMemo<FinalReport | null>(() => {
@@ -77,8 +85,15 @@ function App() {
     return `${resultLine} Classe: ${report.classLabel}. Archetipo: ${report.archetype}. Score: ${report.score}. Tu che classe scegli?`
   }, [report])
 
-  const eventPlacement = useMemo(() => {
+  const leaderboardPlacement = useMemo(() => {
     if (!report) return null
+
+    const sortedRecords = sortLeaderboard(leaderboard)
+
+    if (highlightedLeaderboardEntryId) {
+      const submittedPlacement = sortedRecords.findIndex((record) => record.id === highlightedLeaderboardEntryId)
+      return submittedPlacement >= 0 ? submittedPlacement + 1 : null
+    }
 
     return (
       sortLeaderboard([
@@ -96,11 +111,16 @@ function App() {
         },
       ]).findIndex((record) => record.id === 'temp-preview') + 1
     )
-  }, [leaderboard, leaderboardNickname, report, runState.answers.length, totalDuration])
+  }, [highlightedLeaderboardEntryId, leaderboard, leaderboardNickname, report, runState.answers.length, totalDuration])
+
+  const eventPlacement = useMemo(() => {
+    return leaderboardPlacement
+  }, [leaderboardPlacement])
 
   const resetEndState = () => {
     setLeaderboardNickname('')
     setLeaderboardStatus('idle')
+    setHighlightedLeaderboardEntryId(null)
   }
 
   const selectClass = (classId: GameClass['id']) => {
@@ -207,6 +227,7 @@ function App() {
     try {
       const created = await submitLeaderboardEntry(newRecord)
       setLeaderboard((current) => sortLeaderboard([{ ...newRecord, id: created.id }, ...current]))
+      setHighlightedLeaderboardEntryId(created.id)
       setLeaderboardStatus('success')
     } catch {
       setLeaderboardStatus('error')
@@ -323,6 +344,7 @@ function App() {
               onSwitchClass={restart}
               leaderboard={leaderboard}
               eventPlacement={eventPlacement}
+              highlightedLeaderboardEntryId={highlightedLeaderboardEntryId}
               durationLabel={formatTime(totalDuration)}
             />
           ) : null}

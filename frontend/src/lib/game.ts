@@ -1,4 +1,4 @@
-import type { FinalReport, GameClass, LeaderboardRecord, ResultType, RunAnswer } from '../types'
+import type { Dungeon, FinalReport, GameClass, LeaderboardRecord, ResultType, RunAnswer } from '../types'
 
 export type Screen = 'landing' | 'class-select' | 'intro' | 'dungeon' | 'feedback' | 'end'
 
@@ -130,6 +130,33 @@ export const humanizeTag = (value: string) =>
   value
     .replace(/-/g, ' ')
     .replace(/\b\w/g, (letter: string) => letter.toUpperCase())
+
+const hashSeed = (value: string) =>
+  value.split('').reduce((hash, char) => ((hash * 31) + char.charCodeAt(0)) >>> 0, 7)
+
+const seededRandom = (seed: number) => {
+  let current = seed || 1
+
+  return () => {
+    current = (current * 1664525 + 1013904223) >>> 0
+    return current / 4294967296
+  }
+}
+
+export const shuffleDungeonOptions = (dungeon: Dungeon, runSeed: number) => {
+  const random = seededRandom(hashSeed(`${dungeon.id}:${runSeed}`))
+  const options = [...dungeon.options]
+
+  for (let index = options.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1))
+    ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
+  }
+
+  return {
+    ...dungeon,
+    options,
+  }
+}
 
 export const sortLeaderboard = (records: LeaderboardRecord[]) =>
   [...records].sort((left, right) => {

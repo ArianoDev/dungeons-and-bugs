@@ -17,6 +17,7 @@ interface EndScreenProps {
   onSwitchClass: () => void
   leaderboard: LeaderboardRecord[]
   eventPlacement: number | null
+  highlightedLeaderboardEntryId: string | null
   durationLabel: string
 }
 
@@ -34,6 +35,7 @@ export function EndScreen({
   onSwitchClass,
   leaderboard,
   eventPlacement,
+  highlightedLeaderboardEntryId,
   durationLabel,
 }: EndScreenProps) {
   const titleMap: Record<ResultType, string> = {
@@ -47,6 +49,16 @@ export function EndScreen({
     hard_fought_win: 'Non e stata elegante. E stata eroica.',
     heroic_defeat: 'Il report e gia utile, e il prossimo tentativo pure.',
   }
+
+  const sortedLeaderboard = sortLeaderboard(leaderboard)
+  const topEntries = sortedLeaderboard.slice(0, 5)
+  const highlightedEntry =
+    highlightedLeaderboardEntryId
+      ? sortedLeaderboard.find((record) => record.id === highlightedLeaderboardEntryId) ?? null
+      : null
+  const highlightedEntryInTopEntries = highlightedEntry
+    ? topEntries.some((record) => record.id === highlightedEntry.id)
+    : false
 
   return (
     <section className="space-y-6 pb-10">
@@ -124,7 +136,9 @@ export function EndScreen({
                       : 'Salva in leaderboard'}
                 </button>
                 {eventPlacement ? (
-                  <span className="text-sm text-slate-300">Posizione stimata: #{eventPlacement}</span>
+                  <span className="text-sm text-slate-300">
+                    {highlightedEntry ? `Posizione finale: #${eventPlacement}` : `Posizione stimata: #${eventPlacement}`}
+                  </span>
                 ) : null}
               </div>
               {leaderboardStatus === 'error' ? (
@@ -147,23 +161,54 @@ export function EndScreen({
                 </div>
                 {eventPlacement ? (
                   <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-100">
-                    Posizione provvisoria: #{eventPlacement}
+                    {highlightedEntry ? `La tua posizione: #${eventPlacement}` : `Posizione provvisoria: #${eventPlacement}`}
                   </span>
                 ) : null}
               </div>
               <div className="mt-4 space-y-3">
-                {sortLeaderboard(leaderboard).slice(0, 5).map((record, index) => (
-                  <div key={record.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                {topEntries.map((record, index) => (
+                  <div
+                    key={record.id}
+                    className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
+                      record.id === highlightedLeaderboardEntryId
+                        ? 'border border-[color:var(--accent)] bg-[color:var(--accent-soft)]/70 shadow-lg shadow-[var(--accent-glow)]'
+                        : 'border border-white/10 bg-white/5'
+                    }`}
+                  >
                     <div>
-                      <p className="font-medium text-white">#{index + 1} {record.nickname}</p>
-                      <p className="text-sm text-slate-400">{record.classLabel}</p>
+                      <p className="font-medium text-white">
+                        #{index + 1} {record.nickname}
+                        {record.id === highlightedLeaderboardEntryId ? ' • Tu' : ''}
+                      </p>
+                      <p className={record.id === highlightedLeaderboardEntryId ? 'text-sm text-slate-200' : 'text-sm text-slate-400'}>
+                        {record.classLabel}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-white">{record.score}</p>
-                      <p className="text-sm text-slate-400">{formatTime(record.completionMs)}</p>
+                      <p className={record.id === highlightedLeaderboardEntryId ? 'text-sm text-slate-200' : 'text-sm text-slate-400'}>
+                        {formatTime(record.completionMs)}
+                      </p>
                     </div>
                   </div>
                 ))}
+                {highlightedEntry && !highlightedEntryInTopEntries ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
+                    ...
+                  </div>
+                ) : null}
+                {highlightedEntry && !highlightedEntryInTopEntries ? (
+                  <div className="flex items-center justify-between rounded-2xl border border-[color:var(--accent)] bg-[color:var(--accent-soft)]/70 px-4 py-3 shadow-lg shadow-[var(--accent-glow)]">
+                    <div>
+                      <p className="font-medium text-white">#{eventPlacement} {highlightedEntry.nickname} • Tu</p>
+                      <p className="text-sm text-slate-200">{highlightedEntry.classLabel}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-white">{highlightedEntry.score}</p>
+                      <p className="text-sm text-slate-200">{formatTime(highlightedEntry.completionMs)}</p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}
