@@ -1,4 +1,4 @@
-import type { FinalReport, GameClass, LeaderboardRecord, LeadFormState, ResultType, RunAnswer } from '../types'
+import type { FinalReport, GameClass, LeaderboardRecord, ResultType, RunAnswer } from '../types'
 
 export type Screen = 'landing' | 'class-select' | 'intro' | 'dungeon' | 'feedback' | 'end'
 
@@ -34,13 +34,6 @@ export const initialRunState = (): RunState => ({
   pendingHintId: null,
   lastOutcome: null,
 })
-
-export const leadInitialState: LeadFormState = {
-  email: '',
-  name: '',
-  interest: '',
-  consent: false,
-}
 
 export const classOrder: Record<GameClass['id'], number> = {
   'frontend-bardo': 0,

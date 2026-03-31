@@ -14,20 +14,19 @@ import {
   classOrder,
   formatTime,
   initialRunState,
-  leadInitialState,
   sortLeaderboard,
   type RunState,
 } from './lib/game'
-import { fetchBootstrap, submitLeadCapture, submitLeaderboardEntry } from './lib/api'
-import type { FinalReport, GameClass, LeaderboardRecord, LeadFormState } from './types'
+import { fetchBootstrap, submitLeaderboardEntry } from './lib/api'
+import type { FinalReport, GameClass, LeaderboardRecord } from './types'
 
 function App() {
   const [runState, setRunState] = useState<RunState>(initialRunState())
   const [gameClasses, setGameClasses] = useState<GameClass[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderboardRecord[]>([])
   const [bootstrapStatus, setBootstrapStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [leadForm, setLeadForm] = useState<LeadFormState>(leadInitialState)
-  const [leadStatus, setLeadStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [leaderboardNickname, setLeaderboardNickname] = useState('')
+  const [leaderboardStatus, setLeaderboardStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [copiedShare, setCopiedShare] = useState(false)
   const [elapsedNow, setElapsedNow] = useState(() => Date.now())
 
@@ -86,7 +85,7 @@ function App() {
         ...leaderboard,
         {
           id: 'temp-preview',
-          nickname: leadForm.name || 'Tu',
+          nickname: leaderboardNickname.trim() || 'Tu',
           classId: report.classId,
           classLabel: report.classLabel,
           score: report.score,
@@ -97,11 +96,11 @@ function App() {
         },
       ]).findIndex((record) => record.id === 'temp-preview') + 1
     )
-  }, [leaderboard, leadForm.name, report, runState.answers.length, totalDuration])
+  }, [leaderboard, leaderboardNickname, report, runState.answers.length, totalDuration])
 
-  const resetLeadState = () => {
-    setLeadForm(leadInitialState)
-    setLeadStatus('idle')
+  const resetEndState = () => {
+    setLeaderboardNickname('')
+    setLeaderboardStatus('idle')
   }
 
   const selectClass = (classId: GameClass['id']) => {
@@ -185,51 +184,32 @@ function App() {
     }))
   }
 
-  const submitLead = async (event: FormEvent<HTMLFormElement>) => {
+  const submitLeaderboard = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!report || !leadForm.email || !leadForm.consent) return
+    if (!report || leaderboardStatus === 'success') return
 
-    setLeadStatus('submitting')
+    const nickname = leaderboardNickname.trim()
+    if (!nickname) return
+
+    setLeaderboardStatus('submitting')
+
+    const newRecord = {
+      nickname,
+      classId: report.classId,
+      classLabel: report.classLabel,
+      score: report.score,
+      completionMs: totalDuration,
+      remainingHp: report.remainingHp,
+      hintsUsed: report.hintsUsed,
+      bossCleared: report.resultType !== 'heroic_defeat' && runState.answers.length === 6,
+    }
 
     try {
-      await submitLeadCapture({
-        email: leadForm.email,
-        name: leadForm.name || undefined,
-        interest: leadForm.interest || undefined,
-        consent: leadForm.consent,
-        mode: 'event',
-        classId: report.classId,
-        classLabel: report.classLabel,
-        resultType: report.resultType,
-        score: report.score,
-        remainingHp: report.remainingHp,
-        hintsUsed: report.hintsUsed,
-        strongAreas: report.strongAreas,
-        weakAreas: report.weakAreas,
-        technicalTags: report.technicalTags,
-      })
-
-      const newRecord = {
-        nickname: leadForm.name || 'Avventuriero',
-        classId: report.classId,
-        classLabel: report.classLabel,
-          score: report.score,
-          completionMs: totalDuration,
-          remainingHp: report.remainingHp,
-          hintsUsed: report.hintsUsed,
-          bossCleared: report.resultType !== 'heroic_defeat' && runState.answers.length === 6,
-        }
-
-      try {
-        const created = await submitLeaderboardEntry(newRecord)
-        setLeaderboard((current) => sortLeaderboard([{ ...newRecord, id: created.id }, ...current]))
-      } catch {
-        setLeaderboard((current) => sortLeaderboard([{ ...newRecord, id: `local-${Date.now()}` }, ...current]))
-      }
-
-      setLeadStatus('success')
+      const created = await submitLeaderboardEntry(newRecord)
+      setLeaderboard((current) => sortLeaderboard([{ ...newRecord, id: created.id }, ...current]))
+      setLeaderboardStatus('success')
     } catch {
-      setLeadStatus('error')
+      setLeaderboardStatus('error')
     }
   }
 
@@ -246,7 +226,7 @@ function App() {
 
   const restart = () => {
     setRunState({ ...initialRunState(), screen: 'class-select' })
-    resetLeadState()
+    resetEndState()
     setCopiedShare(false)
   }
 
@@ -335,11 +315,10 @@ function App() {
               shareCopy={shareCopy}
               copiedShare={copiedShare}
               onShare={copyShare}
-              leadForm={leadForm}
-              onLeadChange={setLeadForm}
-              onLeadSubmit={submitLead}
-              leadStatus={leadStatus}
-              onSkipLead={resetLeadState}
+              leaderboardNickname={leaderboardNickname}
+              onLeaderboardNicknameChange={setLeaderboardNickname}
+              onLeaderboardSubmit={submitLeaderboard}
+              leaderboardStatus={leaderboardStatus}
               onRetry={restart}
               onSwitchClass={restart}
               leaderboard={leaderboard}

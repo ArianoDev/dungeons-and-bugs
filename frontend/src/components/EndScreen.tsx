@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 
 import { formatTime, humanizeTag, sortLeaderboard } from '../lib/game'
-import type { FinalReport, GameClass, LeaderboardRecord, LeadFormState, ResultType } from '../types'
+import type { FinalReport, GameClass, LeaderboardRecord, ResultType } from '../types'
 
 interface EndScreenProps {
   gameClass: GameClass
@@ -9,11 +9,10 @@ interface EndScreenProps {
   shareCopy: string
   copiedShare: boolean
   onShare: () => void
-  leadForm: LeadFormState
-  onLeadChange: (state: LeadFormState) => void
-  onLeadSubmit: (event: FormEvent<HTMLFormElement>) => void
-  leadStatus: 'idle' | 'submitting' | 'success' | 'error'
-  onSkipLead: () => void
+  leaderboardNickname: string
+  onLeaderboardNicknameChange: (nickname: string) => void
+  onLeaderboardSubmit: (event: FormEvent<HTMLFormElement>) => void
+  leaderboardStatus: 'idle' | 'submitting' | 'success' | 'error'
   onRetry: () => void
   onSwitchClass: () => void
   leaderboard: LeaderboardRecord[]
@@ -27,11 +26,10 @@ export function EndScreen({
   shareCopy,
   copiedShare,
   onShare,
-  leadForm,
-  onLeadChange,
-  onLeadSubmit,
-  leadStatus,
-  onSkipLead,
+  leaderboardNickname,
+  onLeaderboardNicknameChange,
+  onLeaderboardSubmit,
+  leaderboardStatus,
   onRetry,
   onSwitchClass,
   leaderboard,
@@ -92,6 +90,54 @@ export function EndScreen({
 
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <div className="space-y-5">
+          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+            <p className="text-xs uppercase tracking-[0.28em] text-white/45">Leaderboard</p>
+            <h3 className="mt-3 text-2xl font-semibold text-white">Firma il tuo score</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Inserisci il nickname finale per comparire nella classifica dell evento.
+            </p>
+            <form className="mt-5 space-y-4" onSubmit={onLeaderboardSubmit}>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-100">Nickname</span>
+                <input
+                  className="field"
+                  type="text"
+                  name="nickname"
+                  value={leaderboardNickname}
+                  maxLength={32}
+                  required
+                  disabled={leaderboardStatus === 'submitting' || leaderboardStatus === 'success'}
+                  placeholder="Es. BugSlayer"
+                  onChange={(event) => onLeaderboardNicknameChange(event.target.value)}
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={leaderboardStatus === 'submitting' || leaderboardStatus === 'success'}
+                >
+                  {leaderboardStatus === 'success'
+                    ? 'Score salvato'
+                    : leaderboardStatus === 'submitting'
+                      ? 'Salvataggio...'
+                      : 'Salva in leaderboard'}
+                </button>
+                {eventPlacement ? (
+                  <span className="text-sm text-slate-300">Posizione stimata: #{eventPlacement}</span>
+                ) : null}
+              </div>
+              {leaderboardStatus === 'error' ? (
+                <p className="text-sm text-rose-300">
+                  Non sono riuscito a salvare il punteggio. Riprova tra un attimo.
+                </p>
+              ) : null}
+              {leaderboardStatus === 'success' ? (
+                <p className="text-sm text-emerald-300">Il tuo score e ora visibile in classifica.</p>
+              ) : null}
+            </form>
+          </div>
+
           {leaderboard.length > 0 ? (
             <div className="rounded-[2rem] border border-white/10 bg-black/25 p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
